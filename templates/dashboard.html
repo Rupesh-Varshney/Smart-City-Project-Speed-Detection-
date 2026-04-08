@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Logistics Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+    <!-- Navigation -->
+    <nav class="bg-slate-900 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1-1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                </svg>
+                Vehicle Speed Intelligence System
+            </h1>
+            <div id="connection-status" class="flex items-center gap-2 text-sm text-green-400">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                Live Database Connected
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8">
+       
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <p class="text-sm text-gray-500 font-medium uppercase tracking-wider">Active Vehicle Logs</p>
+                <h2 id="stat-total" class="text-4xl font-bold mt-1">--</h2>
+                <p class="text-xs text-blue-600 mt-2 font-medium"> </p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <p class="text-sm text-red-500 font-medium uppercase tracking-wider">Speed Alerts</p>
+                <h2 id="stat-alerts" class="text-4xl font-bold mt-1 text-red-600">--</h2>
+                <p class="text-xs text-gray-500 mt-2 font-medium">Vehicles exceeding 50 km/h</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <p class="text-sm text-gray-500 font-medium uppercase tracking-wider">Last Activity</p>
+                <h2 id="stat-time" class="text-2xl font-bold mt-2">Live Tracking</h2>
+                <p class="text-xs text-green-600 mt-2 font-medium">Auto-refreshing every 30s</p>
+            </div>
+        </div>
+
+        <!-- Charts and Filtering -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+           
+            <!-- Left Column: Filters and Charts -->
+            <div class="lg:col-span-1 space-y-8">
+                <!-- Filter Section -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-semibold mb-4 border-b pb-2">Filter Records</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Category</label>
+                            <select id="filter-category" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-gray-50">
+                                <option>All</option>
+                                <option>Truck</option>
+                                <option>Car</option>
+                                <option>Van</option>
+                                <option>Bus</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Start Date</label>
+                                <input type="date" id="filter-start" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-gray-50">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">End Date</label>
+                                <input type="date" id="filter-end" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 bg-gray-50">
+                            </div>
+                        </div>
+                        <!-- High Speed Filter -->
+                        <div class="flex items-center p-2 bg-red-50 rounded-md border border-red-100">
+                            <input id="filter-speed-only" type="checkbox" class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded">
+                            <label for="filter-speed-only" class="ml-2 block text-sm text-red-700 font-semibold">Show Only High Speed (>50)</label>
+                        </div>
+                        <button onclick="fetchFilteredData()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200 shadow-md">
+                            Apply Filters
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Traffic Distribution Donut Chart -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-semibold mb-4">Traffic Distribution</h3>
+                    <div class="h-64">
+                        <canvas id="typeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Hourly Chart -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-semibold mb-4">Hourly Activity</h3>
+                    <div class="h-64">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Data Table -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                        <h3 class="text-lg font-semibold">Vehicle Log Feed</h3>
+                        <span id="log-count" class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">0 records</span>
+                    </div>
+                    <div class="overflow-x-auto custom-scrollbar" style="max-height: 600px;">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Time</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Speed</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Challan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Data will be injected here -->
+                                <tr>
+                                    <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic">Loading database records...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let hourlyChart;
+        let typeChart;
+
+        async function fetchStats() {
+            try {
+                const filterRes = await fetch('/api/filter');
+                const allData = await filterRes.json();
+                
+                // Exclude speed 0 entries from calculations
+                const activeData = allData.filter(item => (item.speed || 0) > 0);
+                const highSpeedCount = activeData.filter(item => (item.speed || 0) > 50).length;
+
+                document.getElementById('stat-total').innerText = activeData.length;
+                document.getElementById('stat-alerts').innerText = highSpeedCount;
+            } catch (err) {
+                console.error("Error fetching stats:", err);
+            }
+        }
+
+        async function fetchHourly() {
+            try {
+                const res = await fetch('/api/hourly');
+                const data = await res.json();
+               
+                const labels = data.map(item => `${item._id}:00`);
+                const counts = data.map(item => item.count);
+
+                if (hourlyChart) {
+                    hourlyChart.destroy();
+                }
+
+                const ctx = document.getElementById('hourlyChart').getContext('2d');
+                hourlyChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Vehicles detected',
+                            data: counts,
+                            backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                            borderColor: 'rgb(59, 130, 246)',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error("Error fetching hourly data:", err);
+            }
+        }
+
+        function updateTypeChart(data) {
+            const counts = {};
+            data.forEach(item => {
+                const cat = item.category || 'Unknown';
+                counts[cat] = (counts[cat] || 0) + 1;
+            });
+
+            const labels = Object.keys(counts);
+            const values = Object.values(counts);
+
+            if (typeChart) {
+                typeChart.destroy();
+            }
+
+            const ctx = document.getElementById('typeChart').getContext('2d');
+            typeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#6366f1', '#94a3b8'],
+                        hoverOffset: 4,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        async function fetchFilteredData() {
+            const start = document.getElementById('filter-start').value;
+            const end = document.getElementById('filter-end').value;
+            const cat = document.getElementById('filter-category').value;
+            const speedOnly = document.getElementById('filter-speed-only').checked;
+
+            let url = `/api/filter?category=${cat}`;
+            if (start) url += `&start_date=${start}`;
+            if (end) url += `&end_date=${end}`;
+
+            try {
+                const res = await fetch(url);
+                let data = await res.json();
+
+                // ALWAYS ignore speed 0 entries
+                data = data.filter(item => (item.speed || 0) > 0);
+
+                // Further filter for High Speed > 50 if checked
+                if (speedOnly) {
+                    data = data.filter(item => (item.speed || 0) > 50);
+                }
+
+                renderTable(data);
+                updateTypeChart(data);
+                document.getElementById('log-count').innerText = `${data.length} active records`;
+            } catch (err) {
+                console.error("Error fetching filtered data:", err);
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('table-body');
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-gray-400">No active records found for the selected criteria.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map(row => {
+                const speed = row.speed || 0;
+                const isHighSpeed = speed > 50;
+                const speedClass = isHighSpeed ? 'text-red-600 font-bold' : 'text-gray-900';
+                
+                const statusBadge = isHighSpeed
+                    ? '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Critical Speed</span>'
+                    : '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Normal</span>';
+
+                const challanAction = isHighSpeed
+                    ? '<button onclick="alert(\'Challan is Generated and sent to Given mobile number\')" class="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1 rounded transition-colors shadow-sm">GENERATE</button>'
+                    : '<span class="text-gray-300 text-xs">—</span>';
+
+                return `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="font-medium text-gray-900">${row.date || 'N/A'}</div>
+                            <div class="text-xs">${row.time || ''}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            ${row.category || 'Unknown'}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm ${speedClass}">
+                            ${speed} km/h
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${statusBadge}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${challanAction}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        window.onload = () => {
+            fetchStats();
+            fetchHourly();
+            fetchFilteredData();
+            setInterval(() => {
+                fetchStats();
+                fetchHourly();
+            }, 30000);
+        };
+    </script>
+</body>
+</html>
